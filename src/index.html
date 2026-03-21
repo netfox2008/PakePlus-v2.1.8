@@ -1,11 +1,946 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        Hello World
-    </body>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>专业颜色转换工具2.0</title>
+  <!-- Tailwind CSS v3 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome 4 -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    /* ===== 浅色/深色主题变量 ===== */
+    body {
+      --bg-body: #f3f4f6;
+      --bg-card: #ffffff;
+      --bg-secondary: #f9fafb;
+      --bg-tertiary: #e5e7eb;
+      --text-primary: #1f2937;
+      --text-secondary: #4b5563;
+      --text-muted: #6b7280;
+      --border-light: #d1d5db;
+      --accent: #3B82F6;
+      --accent-hover: #2563EB;
+      --input-bg: #ffffff;
+      --input-border: #d1d5db;
+      --swatch-border: #e5e7eb;
+      transition: background-color 0.2s, color 0.2s;
+    }
+ 
+    body.dark-mode {
+      --bg-body: #0F172A;
+      --bg-card: #1E293B;
+      --bg-secondary: #0F172A;
+      --bg-tertiary: #334155;
+      --text-primary: #F8FAFC;
+      --text-secondary: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border-light: #334155;
+      --input-bg: #0F172A;
+      --input-border: #475569;
+      --swatch-border: #1E293B;
+    }
+ 
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+ 
+    .bg-card {
+      background-color: var(--bg-card);
+      border-color: var(--border-light);
+    }
+    .bg-secondary {
+      background-color: var(--bg-secondary);
+    }
+    .bg-tertiary {
+      background-color: var(--bg-tertiary);
+    }
+    .text-primary {
+      color: var(--text-primary);
+    }
+    .text-secondary {
+      color: var(--text-secondary);
+    }
+    .text-muted {
+      color: var(--text-muted);
+    }
+    .border-custom {
+      border-color: var(--border-light);
+    }
+    input, textarea, select {
+      background-color: var(--input-bg);
+      border-color: var(--input-border);
+      color: var(--text-primary);
+    }
+    input::placeholder {
+      color: var(--text-muted);
+    }
+    .color-swatch, .tint-shade-swatch, .scheme-swatch {
+      border-color: var(--swatch-border);
+    }
+    .gradient-row .swatch {
+      border-color: var(--border-light);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      background: var(--bg-tertiary);
+    }
+    input[type=range]::-moz-range-track {
+      background: var(--bg-tertiary);
+    }
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: -5px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: 0.1s;
+      border: 2px solid white;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      background: var(--accent-hover);
+      transform: scale(1.15);
+    }
+    input[type=range]::-moz-range-thumb {
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid white;
+      cursor: pointer;
+    }
+    @keyframes copySuccess {
+      0% { background-color: var(--accent); }
+      50% { background-color: #10B981; }
+      100% { background-color: var(--accent); }
+    }
+    .copy-success {
+      animation: copySuccess 1s ease;
+    }
+    .color-preview {
+      transition: background-color 0.15s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    .color-preview:hover {
+      opacity: 0.9;
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgba(0,0,0,0.6);
+    }
+    .color-swatch, .tint-shade-swatch, .scheme-swatch {
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .color-swatch:hover, .tint-shade-swatch:hover, .scheme-swatch:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 16px rgba(0,0,0,0.4);
+      border-color: white;
+    }
+    .search-input::placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .tint-shade-container, .scheme-container {
+      background-color: var(--bg-card);
+      border: none;
+    }
+    .gradient-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .gradient-row .swatch {
+      flex: 1 1 0;
+      min-width: 35px;
+      height: 40px;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-light);
+      transition: all 0.1s;
+    }
+    .gradient-row .swatch:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    /* 配色方案网格 */
+    .schemes-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    .scheme-item {
+      flex: 1 1 calc(33.333% - 1rem);
+      min-width: 150px;
+    }
+    .scheme-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    .scheme-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .scheme-row .scheme-swatch {
+      width: 40px;
+      height: 40px;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-light);
+      transition: all 0.1s;
+    }
+    /* 输入行紧凑布局 */
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .input-row label {
+      width: 4rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .input-row input {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--text-primary);
+      font-family: monospace;
+    }
+    .input-row button {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.5rem;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+    .input-row button:hover {
+      background: var(--border-light);
+    }
+ 
+    button.bg-accent {
+      background-color: var(--accent);
+      color: white;
+    }
+    button.bg-accent:hover {
+      background-color: var(--accent-hover);
+    }
+ 
+    /* 自适应15色预设网格 */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .preset-swatch {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      border-radius: 0.75rem;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .preset-swatch:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 16px rgba(0,0,0,0.4);
+      border-color: white;
+    }
+    @media (max-width: 480px) {
+      .presets-grid {
+        gap: 0.25rem;
+      }
+    }
+  </style>
+</head>
+<body class="light-mode">
+  <main class="flex-1 container mx-auto px-4 py-8 lg:py-12 max-w-6xl">
+    <!-- 主卡片 (搜索框已合并进来) -->
+    <div class="bg-card rounded-2xl shadow-2xl p-6 md:p-8 border">
+ 
+      <!-- 智能搜索框 (整合进卡片顶部) -->
+      <div class="mb-8 w-full">
+        <div class="flex flex-col sm:flex-row items-center gap-3">
+          <div class="w-full relative">
+            <i class="fa fa-search absolute left-4 top-3.5 text-muted"></i>
+            <input type="text" id="color-search-input" class="search-input w-full pl-11 pr-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[#3B82F6]" placeholder="输入颜色名 (深红色, darkred) 或 HEX (#ff0033) 或 RGB (244 55 66) ...">
+          </div>
+          <button id="color-search-btn" class="bg-accent hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-medium flex items-center gap-2 whitespace-nowrap transition-all">
+            <i class="fa fa-magic"></i> 转换
+          </button>
+        </div>
+      </div>
+ 
+      <input type="color" id="color-picker" style="display: none;">
+ 
+      <!-- 左右网格 (预览/输入 + 滑块) - 左侧使用flex列使预览块自适应高度 -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- 左侧：预览 + 输入 (预览块高度由flex-1撑满) -->
+        <div class="lg:col-span-1 flex flex-col space-y-4">
+          <!-- 颜色预览块：移除固定高度h-36，添加flex-1使其填满剩余空间，与右侧卡片等高 -->
+          <div class="flex-1">
+            <div id="color-preview" class="color-preview w-full h-full rounded-xl bg-red-500 border-2 border-custom" title="点击选择任意颜色"></div>
+          </div>
+ 
+          <!-- HEX 行 -->
+          <div class="input-row">
+            <label>HEX</label>
+            <input type="text" id="hex-input" placeholder="#FF0000" value="#FF0000">
+            <button id="copy-hex-btn" title="复制HEX"><i class="fa fa-copy"></i></button>
+          </div>
+ 
+          <!-- RGB 行 -->
+          <div class="input-row">
+            <label>RGB</label>
+            <input type="text" id="rgb-input" placeholder="rgb(255,0,0)" value="rgb(255,0,0)">
+            <button id="copy-rgb-btn" title="复制RGB"><i class="fa fa-copy"></i></button>
+          </div>
+ 
+          <!-- HSL 行 -->
+          <div class="input-row">
+            <label>HSL</label>
+            <input type="text" id="hsl-input" placeholder="hsl(0,100%,50%)" value="hsl(0,100%,50%)">
+            <button id="copy-hsl-btn" title="复制HSL"><i class="fa fa-copy"></i></button>
+          </div>
+ 
+          <!-- CMYK 行 -->
+          <div class="input-row">
+            <label>CMYK</label>
+            <input type="text" id="cmyk-input" placeholder="0, 100, 100, 0" value="0, 100, 100, 0">
+            <button id="copy-cmyk-btn" title="复制CMYK"><i class="fa fa-copy"></i></button>
+          </div>
+        </div>
+ 
+        <!-- 右侧：滑块 (预设色块已移出) -->
+        <div class="lg:col-span-2 space-y-8">
+          <!-- 滑块组 -->
+          <div class="bg-secondary p-6 rounded-xl border space-y-6">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label for="hue-slider" class="text-sm font-medium text-secondary">色相 <span class="text-[#3B82F6]">H</span></label>
+                <span id="hue-value" class="text-sm font-mono text-muted bg-tertiary px-2 py-0.5 rounded">0°</span>
+              </div>
+              <input type="range" id="hue-slider" min="0" max="360" value="0" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+              <div class="flex justify-between text-xs text-muted mt-1 px-1">
+                <span>0° (红)</span><span>120° (绿)</span><span>240° (蓝)</span><span>360°</span>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label for="saturation-slider" class="text-sm font-medium text-secondary">饱和度 <span class="text-[#3B82F6]">S</span></label>
+                <span id="saturation-value" class="text-sm font-mono text-muted bg-tertiary px-2 py-0.5 rounded">100%</span>
+              </div>
+              <input type="range" id="saturation-slider" min="0" max="100" value="100" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+              <div class="flex justify-between text-xs text-muted mt-1 px-1">
+                <span>0%</span><span>50%</span><span>100%</span>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label for="lightness-slider" class="text-sm font-medium text-secondary">明度 <span class="text-[#3B82F6]">L</span></label>
+                <span id="lightness-value" class="text-sm font-mono text-muted bg-tertiary px-2 py-0.5 rounded">50%</span>
+              </div>
+              <input type="range" id="lightness-slider" min="0" max="100" value="50" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+              <div class="flex justify-between text-xs text-muted mt-1 px-1">
+                <span>0%</span><span>50%</span><span>100%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- 结束左右网格 -->
+ 
+      <!-- 常用颜色预设 (一行15色，自适应网格) -->
+      <div class="mt-10">
+        <h3 class="text-lg font-medium text-secondary flex items-center gap-2 mb-4">
+          <i class="fa fa-th-large text-[#3B82F6]"></i> 常用颜色预设 · 15色自适应网格
+          <span class="text-xs font-normal text-muted ml-2">(点击直接应用)</span>
+        </h3>
+        <div class="presets-grid">
+          <!-- 15个色块，使用preset-swatch类（继承color-swatch效果），通过data-color传递颜色值 -->
+          <!-- 红 -->
+          <div class="color-swatch preset-swatch bg-red-500" data-color="#EF4444" title="#EF4444"></div>
+          <!-- 橙 -->
+          <div class="color-swatch preset-swatch bg-orange-500" data-color="#F97316" title="#F97316"></div>
+          <!-- 黄 -->
+          <div class="color-swatch preset-swatch bg-yellow-500" data-color="#EAB308" title="#EAB308"></div>
+          <!-- 绿 -->
+          <div class="color-swatch preset-swatch bg-green-500" data-color="#22C55E" title="#22C55E"></div>
+          <!-- 蓝 -->
+          <div class="color-swatch preset-swatch bg-blue-500" data-color="#3B82F6" title="#3B82F6"></div>
+          <!-- 紫 -->
+          <div class="color-swatch preset-swatch bg-purple-500" data-color="#A855F7" title="#A855F7"></div>
+          <!-- 粉 -->
+          <div class="color-swatch preset-swatch bg-pink-500" data-color="#EC4899" title="#EC4899"></div>
+          <!-- 灰 -->
+          <div class="color-swatch preset-swatch bg-gray-500" data-color="#6B7280" title="#6B7280"></div>
+          <!-- 黑 -->
+          <div class="color-swatch preset-swatch bg-black" data-color="#000000" title="#000000"></div>
+          <!-- 白 (加边框) -->
+          <div class="color-swatch preset-swatch bg-white border border-gray-300" data-color="#FFFFFF" title="#FFFFFF"></div>
+          <!-- 青 (teal) -->
+          <div class="color-swatch preset-swatch bg-teal-500" data-color="#14B8A6" title="#14B8A6"></div>
+          <!-- 靛 -->
+          <div class="color-swatch preset-swatch bg-indigo-500" data-color="#6366F1" title="#6366F1"></div>
+          <!-- 棕色 (使用内联背景保持准确) -->
+          <div class="color-swatch preset-swatch" style="background-color: #8B4513;" data-color="#8B4513" title="#8B4513"></div>
+          <!-- Cyan-500 -->
+          <div class="color-swatch preset-swatch" style="background-color: #06B6D4;" data-color="#06B6D4" title="#06B6D4"></div>
+          <!-- Amber-500 -->
+          <div class="color-swatch preset-swatch" style="background-color: #F59E0B;" data-color="#F59E0B" title="#F59E0B"></div>
+        </div>
+      </div>
+ 
+      <!-- 色调与暗调区域 (13阶) -->
+      <div class="mt-8 tint-shade-container">
+        <h3 class="text-lg font-medium text-secondary flex items-center gap-2 mb-3">
+          <i class="fa fa-sun-o text-yellow-400"></i> 色调与暗调 · 13阶渐变
+          <span class="text-xs font-normal text-muted ml-2">(混合白色→Tints | 混合黑色→Shades)</span>
+        </h3>
+        <div class="mb-4">
+          <div class="flex justify-between items-center text-xs text-muted mb-1">
+            <span><i class="fa fa-plus-circle text-white mr-1"></i> 加白 (Tints)</span>
+            <span class="font-mono" id="lightest-color-label">最浅: #ffffff</span>
+          </div>
+          <div id="tints-row" class="gradient-row"></div>
+        </div>
+        <div>
+          <div class="flex justify-between items-center text-xs text-muted mb-1">
+            <span><i class="fa fa-minus-circle text-black mr-1"></i> 加黑 (Shades)</span>
+            <span class="font-mono" id="darkest-color-label">最深: #000000</span>
+          </div>
+          <div id="shades-row" class="gradient-row"></div>
+        </div>
+      </div>
+ 
+      <!-- 配色方案框 (两行三列) -->
+      <div class="mt-8 scheme-container">
+        <h3 class="text-lg font-medium text-secondary flex items-center gap-2 mb-4">
+          <i class="fa fa-paint-brush text-[#3B82F6]"></i> 配色方案
+          <span class="text-xs font-normal text-muted ml-2">(基于当前颜色自动生成、点击配色色块即可应用该颜色)</span>
+        </h3>
+        <div class="schemes-grid">
+          <!-- 互补色 -->
+          <div class="scheme-item">
+            <span class="scheme-label">互补色</span>
+            <div id="scheme-complementary" class="scheme-row"></div>
+          </div>
+          <!-- 类似色 -->
+          <div class="scheme-item">
+            <span class="scheme-label">类似色</span>
+            <div id="scheme-analogous" class="scheme-row"></div>
+          </div>
+          <!-- 分裂互补 -->
+          <div class="scheme-item">
+            <span class="scheme-label">分裂互补</span>
+            <div id="scheme-split-complementary" class="scheme-row"></div>
+          </div>
+          <!-- 三元色 -->
+          <div class="scheme-item">
+            <span class="scheme-label">三元色</span>
+            <div id="scheme-triadic" class="scheme-row"></div>
+          </div>
+          <!-- 四色 -->
+          <div class="scheme-item">
+            <span class="scheme-label">四色</span>
+            <div id="scheme-tetradic" class="scheme-row"></div>
+          </div>
+          <!-- 相似色 -->
+          <div class="scheme-item">
+            <span class="scheme-label">相似色</span>
+            <div id="scheme-similar" class="scheme-row"></div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- 主卡片结束 -->
+  </main>
+ 
+  <script>
+    (function() {
+      document.addEventListener('DOMContentLoaded', function() {
+        const hueSlider = document.getElementById('hue-slider');
+        const saturationSlider = document.getElementById('saturation-slider');
+        const lightnessSlider = document.getElementById('lightness-slider');
+        const hexInput = document.getElementById('hex-input');
+        const rgbInput = document.getElementById('rgb-input');
+        const hslInput = document.getElementById('hsl-input');
+        const cmykInput = document.getElementById('cmyk-input');
+        const colorPreview = document.getElementById('color-preview');
+        const hueVal = document.getElementById('hue-value');
+        const satVal = document.getElementById('saturation-value');
+        const lightVal = document.getElementById('lightness-value');
+        const colorPicker = document.getElementById('color-picker');
+        const tintsRow = document.getElementById('tints-row');
+        const shadesRow = document.getElementById('shades-row');
+        const lightestLabel = document.getElementById('lightest-color-label');
+        const darkestLabel = document.getElementById('darkest-color-label');
+         
+        const schemeComplementary = document.getElementById('scheme-complementary');
+        const schemeAnalogous = document.getElementById('scheme-analogous');
+        const schemeSplit = document.getElementById('scheme-split-complementary');
+        const schemeTriadic = document.getElementById('scheme-triadic');
+        const schemeTetradic = document.getElementById('scheme-tetradic');
+        const schemeSimilar = document.getElementById('scheme-similar');
+ 
+        // 核心转换函数 (保持不变)
+        function hexToRgb(hex) {
+          hex = hex.replace(/^#/, '');
+          if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+          return {
+            r: parseInt(hex.substring(0, 2), 16),
+            g: parseInt(hex.substring(2, 4), 16),
+            b: parseInt(hex.substring(4, 6), 16)
+          };
+        }
+ 
+        function rgbToHex(r, g, b) {
+          return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
+ 
+        function rgbToHsl(r, g, b) {
+          r /= 255; g /= 255; b /= 255;
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          let h, s, l = (max + min) / 2;
+          if (max === min) {
+            h = s = 0;
+          } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+              case g: h = (b - r) / d + 2; break;
+              case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+          }
+          return { h: h * 360, s, l };
+        }
+ 
+        function hslToRgb(h, s, l) {
+          let r, g, b;
+          if (s === 0) {
+            r = g = b = l;
+          } else {
+            const hue2rgb = (p, q, t) => {
+              if (t < 0) t += 1;
+              if (t > 1) t -= 1;
+              if (t < 1/6) return p + (q - p) * 6 * t;
+              if (t < 1/2) return q;
+              if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+              return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h / 360 + 1/3);
+            g = hue2rgb(p, q, h / 360);
+            b = hue2rgb(p, q, h / 360 - 1/3);
+          }
+          return {
+            r: Math.round(r * 255),
+            g: Math.round(g * 255),
+            b: Math.round(b * 255)
+          };
+        }
+ 
+        function rgbToCmyk(r, g, b) {
+          let r_ = r / 255, g_ = g / 255, b_ = b / 255;
+          let k = 1 - Math.max(r_, g_, b_);
+          if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
+          let c = (1 - r_ - k) / (1 - k);
+          let m = (1 - g_ - k) / (1 - k);
+          let y = (1 - b_ - k) / (1 - k);
+          return {
+            c: Math.round(c * 100),
+            m: Math.round(m * 100),
+            y: Math.round(y * 100),
+            k: Math.round(k * 100)
+          };
+        }
+ 
+        function cmykToRgb(c, m, y, k) {
+          c = c / 100; m = m / 100; y = y / 100; k = k / 100;
+          let r = 255 * (1 - c) * (1 - k);
+          let g = 255 * (1 - m) * (1 - k);
+          let b = 255 * (1 - y) * (1 - k);
+          return {
+            r: Math.round(r),
+            g: Math.round(g),
+            b: Math.round(b)
+          };
+        }
+ 
+        function mixWithWhite(rgb, factor) {
+          return {
+            r: Math.round(rgb.r + (255 - rgb.r) * factor),
+            g: Math.round(rgb.g + (255 - rgb.g) * factor),
+            b: Math.round(rgb.b + (255 - rgb.b) * factor)
+          };
+        }
+        function mixWithBlack(rgb, factor) {
+          return {
+            r: Math.round(rgb.r * (1 - factor)),
+            g: Math.round(rgb.g * (1 - factor)),
+            b: Math.round(rgb.b * (1 - factor))
+          };
+        }
+        function generateTintsAndShades(hexColor) {
+          const rgb = hexToRgb(hexColor);
+          const tints = [], shades = [];
+          const steps = 13;
+          for (let i = 0; i < steps; i++) {
+            const factor = i / (steps - 1);
+            const tintRgb = mixWithWhite(rgb, factor);
+            const shadeRgb = mixWithBlack(rgb, factor);
+            tints.push(rgbToHex(tintRgb.r, tintRgb.g, tintRgb.b));
+            shades.push(rgbToHex(shadeRgb.r, shadeRgb.g, shadeRgb.b));
+          }
+          return { tints, shades };
+        }
+ 
+        function updateTintsAndShades() {
+          const currentHex = hexInput.value.trim();
+          if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(currentHex)) return;
+          const { tints, shades } = generateTintsAndShades(currentHex);
+          tintsRow.innerHTML = '';
+          shadesRow.innerHTML = '';
+          tints.forEach(hex => {
+            const swatch = document.createElement('div');
+            swatch.className = 'swatch tint-shade-swatch';
+            swatch.style.backgroundColor = hex;
+            swatch.setAttribute('data-color', hex);
+            swatch.setAttribute('title', hex);
+            swatch.addEventListener('click', () => { hexInput.value = hex; updateFromHex(); });
+            tintsRow.appendChild(swatch);
+          });
+          shades.forEach(hex => {
+            const swatch = document.createElement('div');
+            swatch.className = 'swatch tint-shade-swatch';
+            swatch.style.backgroundColor = hex;
+            swatch.setAttribute('data-color', hex);
+            swatch.setAttribute('title', hex);
+            swatch.addEventListener('click', () => { hexInput.value = hex; updateFromHex(); });
+            shadesRow.appendChild(swatch);
+          });
+          lightestLabel.textContent = `最浅: ${tints[tints.length-1]}`;
+          darkestLabel.textContent = `最深: ${shades[shades.length-1]}`;
+        }
+ 
+        function generateSchemesFromHsl(h, s, l) {
+          const toHex = (hue) => {
+            hue = (hue + 360) % 360;
+            const rgb = hslToRgb(hue, s, l);
+            return rgbToHex(rgb.r, rgb.g, rgb.b);
+          };
+          const complementary = [toHex(h), toHex(h+180)];
+          const analogous = [toHex(h-30), toHex(h), toHex(h+30)];
+          const split = [toHex(h), toHex(h+150), toHex(h+210)];
+          const triadic = [toHex(h), toHex(h+120), toHex(h+240)];
+          const tetradic = [toHex(h), toHex(h+90), toHex(h+180), toHex(h+270)];
+          const similar = [toHex(h-30), toHex(h-15), toHex(h), toHex(h+15), toHex(h+30)];
+          return { complementary, analogous, split, triadic, tetradic, similar };
+        }
+ 
+        function updateColorSchemes() {
+          const h = parseInt(hueSlider.value);
+          const s = parseInt(saturationSlider.value) / 100;
+          const l = parseInt(lightnessSlider.value) / 100;
+          const schemes = generateSchemesFromHsl(h, s, l);
+ 
+          schemeComplementary.innerHTML = '';
+          schemeAnalogous.innerHTML = '';
+          schemeSplit.innerHTML = '';
+          schemeTriadic.innerHTML = '';
+          schemeTetradic.innerHTML = '';
+          schemeSimilar.innerHTML = '';
+ 
+          const createSwatch = (hex) => {
+            const swatch = document.createElement('div');
+            swatch.className = 'scheme-swatch';
+            swatch.style.backgroundColor = hex;
+            swatch.setAttribute('data-color', hex);
+            swatch.setAttribute('title', hex);
+            swatch.addEventListener('click', () => {
+              hexInput.value = hex;
+              updateFromHex();
+            });
+            return swatch;
+          };
+ 
+          schemes.complementary.forEach(hex => schemeComplementary.appendChild(createSwatch(hex)));
+          schemes.analogous.forEach(hex => schemeAnalogous.appendChild(createSwatch(hex)));
+          schemes.split.forEach(hex => schemeSplit.appendChild(createSwatch(hex)));
+          schemes.triadic.forEach(hex => schemeTriadic.appendChild(createSwatch(hex)));
+          schemes.tetradic.forEach(hex => schemeTetradic.appendChild(createSwatch(hex)));
+          schemes.similar.forEach(hex => schemeSimilar.appendChild(createSwatch(hex)));
+        }
+ 
+        function updateColorFromSliders() {
+          const h = parseInt(hueSlider.value);
+          const s = parseInt(saturationSlider.value) / 100;
+          const l = parseInt(lightnessSlider.value) / 100;
+ 
+          hueVal.textContent = h + '°';
+          satVal.textContent = Math.round(s * 100) + '%';
+          lightVal.textContent = Math.round(l * 100) + '%';
+ 
+          const rgb = hslToRgb(h, s, l);
+          const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+          const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+ 
+          colorPreview.style.backgroundColor = hex;
+          hexInput.value = hex;
+          rgbInput.value = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+          hslInput.value = `hsl(${h},${Math.round(s * 100)}%,${Math.round(l * 100)}%)`;
+          cmykInput.value = `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`;
+ 
+          updateTintsAndShades();
+          updateColorSchemes();
+        }
+ 
+        function updateFromHex() {
+          let hex = hexInput.value.trim();
+          if (/^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex)) {
+            if (!hex.startsWith('#')) hex = '#' + hex;
+            if (hex.length === 4) {
+              hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+            }
+            try {
+              const rgb = hexToRgb(hex);
+              const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+              const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+              colorPreview.style.backgroundColor = hex;
+              rgbInput.value = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+              hslInput.value = `hsl(${Math.round(hsl.h)},${Math.round(hsl.s * 100)}%,${Math.round(hsl.l * 100)}%)`;
+              cmykInput.value = `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`;
+              hueSlider.value = Math.round(hsl.h);
+              saturationSlider.value = Math.round(hsl.s * 100);
+              lightnessSlider.value = Math.round(hsl.l * 100);
+              hueVal.textContent = Math.round(hsl.h) + '°';
+              satVal.textContent = Math.round(hsl.s * 100) + '%';
+              lightVal.textContent = Math.round(hsl.l * 100) + '%';
+ 
+              updateTintsAndShades();
+              updateColorSchemes();
+            } catch (e) {}
+          }
+        }
+ 
+        function updateFromRgb() {
+          const match = rgbInput.value.trim().match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
+          if (match) {
+            const r = parseInt(match[1]), g = parseInt(match[2]), b = parseInt(match[3]);
+            if (r>=0&&r<=255 && g>=0&&g<=255 && b>=0&&b<=255) {
+              const hex = rgbToHex(r, g, b);
+              const hsl = rgbToHsl(r, g, b);
+              const cmyk = rgbToCmyk(r, g, b);
+              colorPreview.style.backgroundColor = hex;
+              hexInput.value = hex;
+              hslInput.value = `hsl(${Math.round(hsl.h)},${Math.round(hsl.s * 100)}%,${Math.round(hsl.l * 100)}%)`;
+              cmykInput.value = `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`;
+              hueSlider.value = Math.round(hsl.h);
+              saturationSlider.value = Math.round(hsl.s * 100);
+              lightnessSlider.value = Math.round(hsl.l * 100);
+              hueVal.textContent = Math.round(hsl.h) + '°';
+              satVal.textContent = Math.round(hsl.s * 100) + '%';
+              lightVal.textContent = Math.round(hsl.l * 100) + '%';
+              updateTintsAndShades();
+              updateColorSchemes();
+            }
+          }
+        }
+ 
+        function updateFromHsl() {
+          const match = hslInput.value.trim().match(/^hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/i);
+          if (match) {
+            const h = parseInt(match[1]), s = parseInt(match[2])/100, l = parseInt(match[3])/100;
+            if (h>=0&&h<=360 && s>=0&&s<=1 && l>=0&&l<=1) {
+              const rgb = hslToRgb(h, s, l);
+              const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+              const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+              colorPreview.style.backgroundColor = hex;
+              hexInput.value = hex;
+              rgbInput.value = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+              cmykInput.value = `${cmyk.c}, ${cmyk.m}, ${cmyk.y}, ${cmyk.k}`;
+              hueSlider.value = h;
+              saturationSlider.value = Math.round(s * 100);
+              lightnessSlider.value = Math.round(l * 100);
+              hueVal.textContent = h + '°';
+              satVal.textContent = Math.round(s * 100) + '%';
+              lightVal.textContent = Math.round(l * 100) + '%';
+              updateTintsAndShades();
+              updateColorSchemes();
+            }
+          }
+        }
+ 
+        function updateFromCmyk() {
+          const str = cmykInput.value.trim();
+          let match = str.match(/^(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})$/);
+          if (!match) {
+            match = str.match(/^cmyk\(\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/i);
+          }
+          if (match) {
+            let c = parseInt(match[1]), m = parseInt(match[2]), y = parseInt(match[3]), k = parseInt(match[4]);
+            if (c>=0&&c<=100 && m>=0&&m<=100 && y>=0&&y<=100 && k>=0&&k<=100) {
+              const rgb = cmykToRgb(c, m, y, k);
+              const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+              const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+              colorPreview.style.backgroundColor = hex;
+              hexInput.value = hex;
+              rgbInput.value = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+              hslInput.value = `hsl(${Math.round(hsl.h)},${Math.round(hsl.s * 100)}%,${Math.round(hsl.l * 100)}%)`;
+              cmykInput.value = `${c}, ${m}, ${y}, ${k}`;
+              hueSlider.value = Math.round(hsl.h);
+              saturationSlider.value = Math.round(hsl.s * 100);
+              lightnessSlider.value = Math.round(hsl.l * 100);
+              hueVal.textContent = Math.round(hsl.h) + '°';
+              satVal.textContent = Math.round(hsl.s * 100) + '%';
+              lightVal.textContent = Math.round(hsl.l * 100) + '%';
+              updateTintsAndShades();
+              updateColorSchemes();
+            }
+          }
+        }
+ 
+        // 事件绑定
+        hueSlider.addEventListener('input', updateColorFromSliders);
+        saturationSlider.addEventListener('input', updateColorFromSliders);
+        lightnessSlider.addEventListener('input', updateColorFromSliders);
+ 
+        hexInput.addEventListener('input', updateFromHex);
+        rgbInput.addEventListener('input', updateFromRgb);
+        hslInput.addEventListener('input', updateFromHsl);
+        cmykInput.addEventListener('input', updateFromCmyk);
+ 
+        // 所有预设色块 (包括新增内联色块) 均通过 class="color-swatch" 匹配
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+          swatch.addEventListener('click', function() {
+            hexInput.value = this.getAttribute('data-color');
+            updateFromHex();
+          });
+        });
+ 
+        colorPreview.addEventListener('click', () => {
+          colorPicker.value = hexInput.value;
+          colorPicker.click();
+        });
+ 
+        colorPicker.addEventListener('input', (e) => {
+          hexInput.value = e.target.value;
+          updateFromHex();
+        });
+ 
+        const copyHandler = (btnId, getText) => {
+          document.getElementById(btnId).addEventListener('click', () => {
+            navigator.clipboard.writeText(getText()).then(() => {
+              const btn = document.getElementById(btnId);
+              btn.classList.add('copy-success');
+              setTimeout(() => btn.classList.remove('copy-success'), 800);
+            });
+          });
+        };
+        copyHandler('copy-hex-btn', () => hexInput.value);
+        copyHandler('copy-rgb-btn', () => rgbInput.value);
+        copyHandler('copy-hsl-btn', () => hslInput.value);
+        copyHandler('copy-cmyk-btn', () => cmykInput.value);
+ 
+        // 搜索框
+        const searchInput = document.getElementById('color-search-input');
+        const searchBtn = document.getElementById('color-search-btn');
+ 
+        const colorNameMap = {
+          '红色': '#FF0000', '深红色': '#8B0000', '浅红色': '#FFCCCC',
+          '绿色': '#00FF00', '深绿色': '#006400', '浅绿色': '#CCFFCC',
+          '蓝色': '#0000FF', '深蓝色': '#00008B', '浅蓝色': '#ADD8E6',
+          '黄色': '#FFFF00', '深黄色': '#CCCC00', '浅黄色': '#FFFF99',
+          '青色': '#00FFFF', '深青色': '#008B8B', '浅青色': '#E0FFFF',
+          '紫色': '#800080', '深紫色': '#4B0082', '浅紫色': '#E6E6FA',
+          '橙色': '#FFA500', '深橙色': '#FF8C00', '浅橙色': '#FFDAB9',
+          '粉色': '#FFC0CB', '深粉色': '#FF1493', '浅粉色': '#FFB6C1',
+          '棕色': '#A52A2A', '深棕色': '#5D3A1A', '浅棕色': '#D2B48C',
+          '灰色': '#808080', '深灰色': '#404040', '浅灰色': '#D3D3D3',
+          '黑色': '#000000', '白色': '#FFFFFF',
+          'red': '#FF0000', 'darkred': '#8B0000', 'lightcoral': '#F08080',
+          'green': '#00FF00', 'darkgreen': '#006400', 'lightgreen': '#90EE90',
+          'blue': '#0000FF', 'darkblue': '#00008B', 'lightblue': '#ADD8E6',
+          'yellow': '#FFFF00', 'darkyellow': '#CCCC00', 'lightyellow': '#FFFFE0',
+          'cyan': '#00FFFF', 'darkcyan': '#008B8B', 'lightcyan': '#E0FFFF',
+          'purple': '#800080', 'darkpurple': '#4B0082', 'lavender': '#E6E6FA',
+          'orange': '#FFA500', 'darkorange': '#FF8C00', 'peachpuff': '#FFDAB9',
+          'pink': '#FFC0CB', 'deeppink': '#FF1493', 'hotpink': '#FF69B4',
+          'brown': '#A52A2A', 'saddlebrown': '#8B4513', 'tan': '#D2B48C',
+          'gray': '#808080', 'darkgray': '#404040', 'lightgray': '#D3D3D3',
+          'black': '#000000', 'white': '#FFFFFF'
+        };
+ 
+        function parseColorInput(input) {
+          let str = input.trim();
+          if (str === '') return null;
+          let hexMatch = str.match(/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/);
+          if (hexMatch) {
+            let hex = hexMatch[0];
+            if (!hex.startsWith('#')) hex = '#' + hex;
+            if (hex.length === 4) {
+              hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+            }
+            return hex;
+          }
+          let rgbMatch = str.match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
+          if (!rgbMatch) {
+            rgbMatch = str.match(/^(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})$/);
+          }
+          if (rgbMatch) {
+            const r = parseInt(rgbMatch[1]), g = parseInt(rgbMatch[2]), b = parseInt(rgbMatch[3]);
+            if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
+              return rgbToHex(r, g, b);
+            }
+          }
+          const lowerStr = str.toLowerCase();
+          if (colorNameMap.hasOwnProperty(lowerStr)) {
+            return colorNameMap[lowerStr];
+          }
+          return null;
+        }
+ 
+        function applySearch() {
+          const raw = searchInput.value;
+          const hex = parseColorInput(raw);
+          if (hex) {
+            hexInput.value = hex;
+            updateFromHex();
+          } else {
+            alert('无法识别的颜色描述，请尝试使用 HEX / RGB / 颜色名 (如 "深红色" 或 "darkred")');
+          }
+        }
+ 
+        searchBtn.addEventListener('click', applySearch);
+        searchInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') applySearch();
+        });
+ 
+        updateColorFromSliders();
+      });
+    })();
+  </script>
+</body>
 </html>
