@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>五子棋 · 宽格版</title>
+    <title>五子棋 · 宽格版（修复悔棋BUG）</title>
     <style>
         * {
             box-sizing: border-box;
@@ -219,13 +219,100 @@
             left: -9999px;
         }
  
-        [url=home.php?mod=space&uid=945662]@media[/url] (max-width: 1200px) {
+        /* 弹窗样式 */
+        .victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+ 
+        .modal-content {
+            background: linear-gradient(135deg, #433b32, #2a2620);
+            border-radius: 40px;
+            padding: 60px 40px;
+            text-align: center;
+            border: 4px solid #e6b567;
+            box-shadow: 0 0 50px rgba(255, 207, 154, 0.6);
+            min-width: 400px;
+            max-width: 600px;
+        }
+ 
+        .modal-title {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+ 
+        .win-text {
+            background: linear-gradient(135deg, #ffdf88, #ffb74d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+ 
+        .lose-text {
+            background: linear-gradient(135deg, #ff8a80, #ef5350);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+ 
+        .modal-subtitle {
+            font-size: 28px;
+            color: #f2e3cf;
+            margin-bottom: 40px;
+        }
+ 
+        .modal-btn {
+            background: #2f2f3a;
+            border: 3px solid #e6b567;
+            color: #f2e3cf;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 18px 40px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 0 #1a1a22, 0 6px 20px black;
+        }
+ 
+        .modal-btn:hover {
+            background: #4a4a5a;
+            border-color: #ffcf9a;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 0 #1a1a22, 0 8px 25px black;
+        }
+ 
+        .modal-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #1a1a22;
+        }
+ 
+        @media (max-width: 1200px) {
             .game-layout {
                 flex-wrap: wrap;
             }
             .control-panel {
                 width: 320px;
                 max-height: none;
+            }
+            .modal-content {
+                min-width: 80%;
+                padding: 40px 20px;
+            }
+            .modal-title {
+                font-size: 36px;
+            }
+            .modal-subtitle {
+                font-size: 22px;
             }
         }
     </style>
@@ -250,16 +337,15 @@
     (function() {
         // ---------- 常量 & 全局变量 ----------
         const BOARD_SIZE = 15;
-        // 扩大方格：CELL_SIZE 从38增加到46，这样棋盘总宽 14*46 = 644
-        // 边缘留出两子宽度：左边界设为 (900-644)/2 ≈ 128，这样左右各有128px边缘，相当于约2.8个棋子宽度
-        const CELL_SIZE = 46;           // 增大方格尺寸
-        const BOARD_LEFT = 128;         // 计算使棋盘居中，边缘留出约两子宽度 (128/46 ≈ 2.78)
-        const BOARD_TOP = 128;          // 上下同样留边
-        const PIECE_RADIUS = 20;        // 棋子相应增大 (46/2-3 ≈ 20)
+        const CELL_SIZE = 46;           
+        const BOARD_LEFT = 128;         
+        const BOARD_TOP = 128;          
+        const PIECE_RADIUS = 20;        
  
         // 棋盘底色
         let BOARD_COLOR = [235, 194, 142]; 
         let bodyBgColor = [44, 62, 79];
+        let victoryModalShown = false; 
  
         // 游戏状态类
         class Game {
@@ -277,6 +363,7 @@
                 this.reviewMode = false;
                 this.reviewStep = -1;
                 this.reviewHistory = [];
+                this.isUndoing = false; // 新增：悔棋状态锁
             }
  
             reset() {
@@ -288,24 +375,72 @@
                 this.reviewStep = -1;
                 this.reviewHistory = [];
                 this.aiThinking = false;
+                this.isUndoing = false; // 重置悔棋锁
+                victoryModalShown = false; 
             }
  
             placePiece(row, col) {
-                if (row<0||row>=BOARD_SIZE||col<0||col>=BOARD_SIZE||this.board[row][col]!==0||this.winner!==0||this.reviewMode) return false;
+                // 悔棋过程中禁止落子
+                if (this.isUndoing || row<0||row>=BOARD_SIZE||col<0||col>=BOARD_SIZE||this.board[row][col]!==0||this.winner!==0||this.reviewMode) return false;
                 this.board[row][col] = this.turn;
                 this.history.push([row, col, this.turn]);
-                if (this.checkWin(row, col)) this.winner = this.turn;
+                if (this.checkWin(row, col)) {
+                    this.winner = this.turn;
+                    setTimeout(showVictoryModal, 300);
+                }
                 this.turn = this.turn === 1 ? 2 : 1;
                 return true;
             }
  
+            // 核心修复：悔棋逻辑
             undo() {
-                if (this.history.length === 0 || this.reviewMode) return false;
-                let [row, col, player] = this.history.pop();
-                this.board[row][col] = 0;
-                this.winner = 0;
-                this.turn = player;
-                return true;
+                // 禁止在复盘/AI思考/无历史记录时悔棋
+                if (this.history.length === 0 || this.reviewMode || this.aiThinking) return false;
+                 
+                // 加悔棋锁，防止AI在悔棋过程中落子
+                this.isUndoing = true;
+                 
+                try {
+                    let undoCount = 0;
+                    // 人机模式：一次性撤销玩家+AI的两步棋
+                    if (this.mode === 'pve') {
+                        // 先撤销最后一步（AI的棋）
+                        if (this.history.length > 0) {
+                            let [row, col] = this.history.pop();
+                            this.board[row][col] = 0;
+                            undoCount++;
+                        }
+                        // 再撤销玩家的棋（如果有）
+                        if (this.history.length > 0) {
+                            let [row, col, player] = this.history.pop();
+                            this.board[row][col] = 0;
+                            this.turn = player; // 恢复到玩家回合
+                            undoCount++;
+                        }
+                    } 
+                    // 人人模式：只撤销一步
+                    else {
+                        let [row, col, player] = this.history.pop();
+                        this.board[row][col] = 0;
+                        this.turn = player;
+                        undoCount++;
+                    }
+ 
+                    // 重置游戏状态
+                    this.winner = 0;
+                    victoryModalShown = false;
+                     
+                    // 移除胜利弹窗
+                    const modal = document.querySelector('.victory-modal');
+                    if (modal) modal.remove();
+                     
+                    return undoCount > 0;
+                } finally {
+                    // 延迟释放锁，确保状态完全同步
+                    setTimeout(() => {
+                        this.isUndoing = false;
+                    }, 200);
+                }
             }
  
             checkWin(row, col) {
@@ -414,6 +549,7 @@
                     this.board = Array(BOARD_SIZE).fill().map(()=>Array(BOARD_SIZE).fill(0));
                     this.turn = 1;
                     this.winner = 0;
+                    victoryModalShown = false;
                     return true;
                 } catch (e) { return false; }
             }
@@ -439,6 +575,7 @@
                     this.turn = lastPlayer === 1 ? 2 : 1;
                     this.winner = 0;
                 } else { this.turn = 1; this.winner = 0; }
+                victoryModalShown = false;
             }
  
             exitReview() {
@@ -454,7 +591,57 @@
         const ctx = canvas.getContext('2d');
         const colorPicker = document.getElementById('colorPicker');
  
-        // 绘制棋盘 (900x900, 方格放大，边缘留两子宽度)
+        // 显示胜利弹窗
+        function showVictoryModal() {
+            if (victoryModalShown) return;
+            victoryModalShown = true;
+ 
+            const modal = document.createElement('div');
+            modal.className = 'victory-modal';
+             
+            let isPlayerWin = false;
+            let titleText = '';
+            let subText = '';
+ 
+            if (game.mode === 'pve') {
+                if (game.winner === 1) {
+                    isPlayerWin = true;
+                    titleText = '恭喜！';
+                    subText = '你赢了 太牛逼了 &#127881;';
+                } else {
+                    isPlayerWin = false;
+                    titleText = '很遗憾！';
+                    subText = '你输了 小瘪三 &#128557;';
+                }
+            } else {
+                if (game.winner === 1) {
+                    titleText = '黑棋胜利！';
+                    subText = '恭喜黑棋获胜 &#127881;';
+                } else {
+                    titleText = '白棋胜利！';
+                    subText = '恭喜白棋获胜 &#127881;';
+                }
+            }
+ 
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-title ${isPlayerWin ? 'win-text' : 'lose-text'}">${titleText}</div>
+                    <div class="modal-subtitle">${subText}</div>
+                    <button class="modal-btn" id="modalRestartBtn">再来一局</button>
+                </div>
+            `;
+ 
+            document.body.appendChild(modal);
+ 
+            document.getElementById('modalRestartBtn').addEventListener('click', () => {
+                game.reset();
+                drawBoard();
+                renderPanels();
+                modal.remove();
+            });
+        }
+ 
+        // 绘制棋盘
         function drawBoard() {
             ctx.clearRect(0, 0, 900, 900);
              
@@ -512,7 +699,7 @@
             }
         }
  
-        // 渲染左右面板 (使用方形图标)
+        // 渲染面板
         function renderPanels() {
             const leftDiv = document.getElementById('leftPanel');
             const rightDiv = document.getElementById('rightPanel');
@@ -534,7 +721,6 @@
                 return;
             }
  
-            // 正常模式左面板 - 所有按钮添加方形图标
             leftDiv.innerHTML = `
                 <div class="panel-title">&#9899; 五子棋</div>
                 <div class="group-title">&#127918; 模式</div>
@@ -577,8 +763,22 @@
             for (let i=0; i<3; i++) {
                 document.getElementById(`diff${i}`)?.addEventListener('click', ()=>{ game.difficulty=['简单','中等','困难'][i]; renderPanels(); });
             }
-            document.getElementById('resetBtn')?.addEventListener('click', ()=>{ game.reset(); drawBoard(); renderPanels(); });
-            document.getElementById('undoBtn')?.addEventListener('click', ()=>{ game.undo(); drawBoard(); renderPanels(); });
+            document.getElementById('resetBtn')?.addEventListener('click', ()=>{ 
+                game.reset(); 
+                const modal = document.querySelector('.victory-modal');
+                if (modal) modal.remove();
+                drawBoard(); 
+                renderPanels(); 
+            });
+            // 修复悔棋按钮：增加失败提示
+            document.getElementById('undoBtn')?.addEventListener('click', ()=>{ 
+                if(game.undo()) {
+                    drawBoard(); 
+                    renderPanels(); 
+                } else {
+                    alert('无法悔棋！（无历史记录/复盘模式/AI思考中）');
+                }
+            });
             document.getElementById('toggleCoords')?.addEventListener('click', ()=>{ game.showCoords = !game.showCoords; drawBoard(); renderPanels(); });
  
             document.getElementById('saveBtn')?.addEventListener('click', ()=>{
@@ -593,6 +793,9 @@
  
         // 鼠标落子
         canvas.addEventListener('click', (e)=>{
+            // 悔棋过程中禁止落子
+            if (game.isUndoing) return;
+             
             const rect = canvas.getBoundingClientRect();
             const scale = canvas.width / rect.width;
             const mouseX = (e.clientX - rect.left) * scale;
@@ -603,26 +806,44 @@
                 row = Math.max(0, Math.min(BOARD_SIZE-1, row));
                 col = Math.max(0, Math.min(BOARD_SIZE-1, col));
                 if (!game.reviewMode) {
-                    if (game.mode==='pve' && game.turn===1 && game.winner===0) game.placePiece(row,col);
-                    else if (game.mode==='pvp' && game.winner===0) game.placePiece(row,col);
-                    drawBoard(); renderPanels();
+                    let isPlaced = false;
+                    if (game.mode==='pve' && game.turn===1 && game.winner===0) {
+                        isPlaced = game.placePiece(row,col);
+                    } else if (game.mode==='pvp' && game.winner===0) {
+                        isPlaced = game.placePiece(row,col);
+                    }
+                    // 只有落子成功才刷新界面
+                    if (isPlaced) {
+                        drawBoard(); 
+                        renderPanels();
+                    }
                 }
             }
         });
  
+        // 修复AI落子逻辑：增加悔棋锁检查
         function aiTurn() {
-            if (!game.reviewMode && game.mode === 'pve' && game.turn === 2 && game.winner === 0 && !game.aiThinking) {
-                game.aiThinking = true;
-                setTimeout(() => {
-                    let best = game.difficulty === '简单' ? game.aiMoveEasy() : game.aiMoveMedium(game.difficulty === '中等' ? 0.8 : 0.9);
-                    if (best) game.placePiece(best[0], best[1]);
-                    game.aiThinking = false;
-                    drawBoard(); renderPanels();
-                }, 30);
+            // 悔棋中/复盘/非人机模式/非AI回合/游戏结束/AI思考中 都不执行
+            if (game.isUndoing || game.reviewMode || game.mode !== 'pve' || game.turn !== 2 || game.winner !== 0 || game.aiThinking) {
+                return;
             }
+             
+            game.aiThinking = true;
+            // 增加AI思考延迟（从30ms改为300ms），提升体验
+            setTimeout(() => {
+                let best = game.difficulty === '简单' ? game.aiMoveEasy() : game.aiMoveMedium(game.difficulty === '中等' ? 0.8 : 0.9);
+                if (best) game.placePiece(best[0], best[1]);
+                game.aiThinking = false;
+                drawBoard(); 
+                renderPanels();
+            }, 300);
         }
  
-        function loop() { drawBoard(); aiTurn(); requestAnimationFrame(loop); }
+        function loop() { 
+            drawBoard(); 
+            aiTurn(); 
+            requestAnimationFrame(loop); 
+        }
  
         document.body.style.backgroundColor = `rgb(${bodyBgColor[0]},${bodyBgColor[1]},${bodyBgColor[2]})`;
         renderPanels();
